@@ -1,0 +1,61 @@
+version: "3"
+
+services:
+  java_backend-service:
+    image: 'docker.siemens.com/teamrse/metaverse-dt/metaverse-backend:latest'
+    container_name: metaverse-dt-backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/metaverse-dt
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=12345678
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_ACTIVEMQ_BROKER_URL=tcp://activemq:61616
+      - SPRING_ACTIVEMQ_USER=admin
+      - SPRING_ACTIVEMQ_PASSWORD=admin
+      - SPRING_ACTIVEMQ_PACKAGES_TRUST_ALL=true
+
+    ports:
+      - 4050:4050
+    depends_on: 
+      - postgres
+      - activemq
+    restart: always
+    networks:
+      - metaverse-dt_app    
+
+  postgres:
+    image: postgres
+    container_name: postgres-container
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=metaverse-dt
+    volumes:
+      - ./db/sql:/docker-entrypoint-initdb.d
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    networks:
+      - metaverse-dt_app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready --dbname $$POSTGRES_DB --username $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  activemq:
+    image: rmohr/activemq
+    container_name: activemq-container
+    restart: unless-stopped
+    ports:
+      - 61616:61616
+      - 8161:8161
+    environment:
+      - ACTIVEMQ_USER=admin
+      - ACTIVEMQ_PASSWORD=admin
+    networks:
+      - metaverse-dt_app
+  
+networks:
+    metaverse-dt_app:
